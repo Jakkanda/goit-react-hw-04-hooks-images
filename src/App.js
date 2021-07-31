@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import { useState, useEffect } from 'react';
 import styled from './App.module.css';
 import { ImageGallery } from './ImageGallery/ImageGallery';
 import { Searchbar } from './Searchbar/Searchbar';
@@ -7,123 +7,82 @@ import { Button } from './Button/Button';
 import { Modal } from './Modal/Modal';
 import Loader from 'react-loader-spinner';
 
-class App extends Component {
-  state = {
-    query: '',
-    page: 1,
-    images: [],
-    isModal: false,
-    currentItem: {},
-    isLoading: false,
+function App() {
+  const [query, setQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [images, setImages] = useState([]);
+  const [isModal, setIsModal] = useState(false);
+  const [currentItem, setCurrentItem] = useState({});
+  const [isLoading, setIsLoading] = useState(false);
+
+  const formSubmit = ({ query }) => {
+    setQuery(query);
   };
 
-  formSubmit = data => {
-    this.setState({ query: data.query });
-  };
-
-  async componentDidUpdate(prevProps, prevState) {
-    if (prevState !== this.state) {
-      if (prevState.query !== this.state.query) {
-        this.setState(prevState => ({ ...prevState, isLoading: true }));
-        const response = await Pixabay.getImages(
-          this.state.query,
-          this.state.page,
-        );
-
-        this.setState(prevState => ({
-          ...prevState,
-          images: response,
-          isLoading: false,
-        }));
-      }
-
-      if (prevState.page !== this.state.page) {
-        this.setState(prevState => ({ ...prevState, isLoading: true }));
-        const response = await Pixabay.getImages(
-          this.state.query,
-          this.state.page,
-        );
-
-        this.setState(prevState => ({
-          ...prevState,
-          images: [...prevState.images, ...response],
-          isLoading: false,
-        }));
-
-        window.scrollTo({
-          top: document.documentElement.scrollHeight,
-          behavior: 'smooth',
-        });
-      }
+  useEffect(() => {
+    if (!query) {
+      return;
     }
-  }
+    const getImagesFromPixabay = async () => {
+      setIsLoading(true);
+      const response = await Pixabay.getImages(query, page);
+      setImages(prevState => [...prevState, ...response]);
+      setIsLoading(false);
+      window.scrollTo({
+        top: document.documentElement.scrollHeight,
+        behavior: 'smooth',
+      });
+    };
+    getImagesFromPixabay();
+  }, [query, page]);
 
-  onLoadMore = () => {
-    this.setState(prevState => ({ ...prevState, page: ++prevState.page }));
+  useEffect(() => {
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  });
+
+  const onLoadMore = () => {
+    setPage(prevState => ++prevState);
   };
 
-  onModalOpen = event => {
+  const onModalOpen = event => {
     const id = event.currentTarget.id;
-    const currentItem = this.state.images.find(
-      elem => elem.id === parseInt(id, 10),
-    );
-    this.setState(prevState => ({
-      ...prevState,
-      isModal: true,
-      currentItem,
-    }));
+    const currentItem = images.find(elem => elem.id === parseInt(id, 10));
+    setIsModal(true);
+    setCurrentItem(currentItem);
   };
 
-  componentDidMount() {
-    window.addEventListener('keydown', this.handleKeyDown);
-  }
-
-  componentWillUnmount() {
-    window.removeEventListener('keydown', this.handleKeyDown);
-  }
-
-  handleKeyDown = event => {
+  const handleKeyDown = event => {
     if (event.code === 'Escape') {
-      this.setState(prevState => ({
-        ...prevState,
-        isModal: false,
-      }));
+      setIsModal(false);
     }
   };
 
-  closeModal = event => {
+  const closeModal = event => {
     if (event.currentTarget === event.target) {
-      this.setState(prevState => ({
-        ...prevState,
-        isModal: false,
-      }));
+      setIsModal(false);
     }
   };
 
-  render() {
-    return (
-      <div className={styled.App}>
-        <Searchbar onSubmit={this.formSubmit} />
-        <ImageGallery
-          images={this.state.images}
-          onModalOpen={this.onModalOpen}
+  return (
+    <div className={styled.App}>
+      <Searchbar onSubmit={formSubmit} />
+      <ImageGallery images={images} onModalOpen={onModalOpen} />
+      {isModal && <Modal item={currentItem} onClose={closeModal} />}
+      {images.length > 1 && <Button onClick={onLoadMore} />}
+      {isLoading && (
+        <Loader
+          type="Puff"
+          color="#00BFFF"
+          height={100}
+          width={100}
+          timeout={3000} //3 secs
         />
-        {this.state.isModal && (
-          <Modal item={this.state.currentItem} onClose={this.closeModal} />
-        )}
-        {this.state.images.length > 1 && <Button onClick={this.onLoadMore} />}
-        {this.state.isLoading && (
-          <Loader
-            type="Puff"
-            color="#00BFFF"
-            height={100}
-            width={100}
-            timeout={3000} //3 secs
-          />
-        )}
-      </div>
-    );
-  }
+      )}
+    </div>
+  );
 }
 
 export default App;
