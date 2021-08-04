@@ -17,6 +17,8 @@ function App() {
 
   const formSubmit = ({ query }) => {
     setQuery(query);
+    setPage(1);
+    setImages([]);
   };
 
   useEffect(() => {
@@ -35,19 +37,6 @@ function App() {
     };
     getImagesFromPixabay();
   }, [query, page]);
-
-  useEffect(() => {
-    if (!query) {
-      return;
-    }
-    const getImagesFromPixabay = async () => {
-      setIsLoading(true);
-      const response = await Pixabay.getImages(query, 1);
-      setImages(response);
-      setIsLoading(false);
-    };
-    getImagesFromPixabay();
-  }, [query]);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
